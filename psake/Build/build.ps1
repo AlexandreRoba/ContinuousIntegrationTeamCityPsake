@@ -9,4 +9,4 @@ $psakeModule = (Get-ChildItem ('..\Packages\psake*\tools\psake.psm1')).FullName 
 # Import the module
 Import-Module $psakeModule
 
-Invoke-psake -buildFile .\default.ps1 -taskList Test
+Invoke-psake -buildFile .\default.ps1 -taskList Test -properties @{ "testMessage" = "We are now running the test!"}

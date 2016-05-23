@@ -1,19 +1,19 @@
 ﻿properties{
-	$CleanMessage = "Executed Clean!"
-	$CompileMessage = "Executed Compile !"
-	$TestMessage = "Executed unit tests!"
+	$cleanMessage = "Executed Clean!"
+	$compileMessage = "Executed Compile !"
+	$testMessage = "Executed unit tests!"
 }
 
 task default -depends Test
 
 task Clean -description "Clean the build output"{
-	Write-Host $CleanMessage
+	Write-Host $cleanMessage
 }
 
 task Compile -depends Clean -description "Compile the all solution"{
-	Write-Host $CompileMessage
+	Write-Host $compileMessage
 }
 
 task Test -depends Compile, Clean -description "Runs the unit test"{
-	Write-Host $TestMessage
+	Write-Host $testMessage
 }
