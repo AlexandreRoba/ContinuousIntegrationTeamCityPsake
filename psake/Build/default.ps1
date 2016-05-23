@@ -10,6 +10,8 @@
 	$buildPlatform = "Any CPU"
 }
 
+FormatTaskName "`r`n`r`n---------- Executing {0} Task -------"
+
 task default -depends Test
 
 task Init -description "Initialises the build by removing previous artifacts and creating output directories" `
@@ -42,7 +44,9 @@ task Compile -depends Init `
 	-description "Compile the solution"`
 	-requiredVariables solutionFile,buildConfiguration,buildPlatform,temporaryOutputDirectory {
 	Write-Host "Building Solution $solutionFile"
-	msbuild $solutionFile "/p:Configuration=$buildConfiguration;Platform=$buildPlatform;OutDir=$temporaryOutputDirectory"
+	exec {
+		msbuild $solutionFile "/p:Configuration=$buildConfiguration;Platform=$buildPlatform;OutDir=$temporaryOutputDirectory"
+	}
 }
 
 task Test -depends Compile, Clean -description "Runs the unit test"{
