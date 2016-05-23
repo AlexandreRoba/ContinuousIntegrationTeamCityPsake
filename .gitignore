@@ -1,0 +1,5 @@
+bin/
+debug/
+packages/
+obj/
+.vs/
