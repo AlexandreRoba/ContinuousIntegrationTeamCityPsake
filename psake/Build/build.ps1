@@ -11,5 +11,6 @@ Import-Module $psakeModule
 
 Invoke-psake -buildFile .\default.ps1 `
 	-taskList Test `
-	-properties @{ "testMessage" = "We are now running the test!"}`
+	-properties @{ "buildConfiguration" = "Release"
+					"buildPlatform" = "Any CPU"}`
 	-parameters @{ "solutionFile" = "..\psake.sln"}

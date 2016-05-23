@@ -1,17 +1,26 @@
 ﻿properties{
 	$cleanMessage = "Executed Clean!"
-	$compileMessage = "Executed Compile !"
 	$testMessage = "Executed unit tests!"
 
 	$solutionDirectory = (Get-Item $solutionFile).DirectoryName
 	$outputDirectory = "$solutionDirectory\.build"
 	$temporaryOutputDirectory = "$outputDirectory\temp"
+
+	$buildConfiguration = "Release"
+	$buildPlatform = "Any CPU"
 }
 
 task default -depends Test
 
 task Init -description "Initialises the build by removing previous artifacts and creating output directories" `
 			-requiredVariables outputDirectory, temporaryOutputDirectory {
+	
+	Assert -conditionToCheck ("Debug", "Release" -contains $buildConfiguration) `
+			-failureMessage "Invalid build configuration '$buildConfiguration'. Values must be 'Debug' or 'Release'."
+
+	Assert -conditionToCheck ("x86", "x64", "Any CPU" -contains $buildPlatform) `
+			-failureMessage "Invalid build platform '$buildPlatform'. Values must be 'x86', 'x64' or 'Any CPU'."
+
 	# Remove previous build results
 	if(Test-Path $outputDirectory){
 		Write-Host "Removing output Directory located at $outputDirectory"
@@ -29,8 +38,11 @@ task Clean -description "Clean the build output"{
 	Write-Host $cleanMessage
 }
 
-task Compile -depends Init -description "Compile the all solution"{
-	Write-Host $compileMessage
+task Compile -depends Init `
+	-description "Compile the solution"`
+	-requiredVariables solutionFile,buildConfiguration,buildPlatform,temporaryOutputDirectory {
+	Write-Host "Building Solution $solutionFile"
+	msbuild $solutionFile "/p:Configuration=$buildConfiguration;Platform=$buildPlatform;OutDir=$temporaryOutputDirectory"
 }
 
 task Test -depends Compile, Clean -description "Runs the unit test"{
