@@ -8,10 +8,12 @@ properties{
 	$outputDirectory = "$solutionDirectory\.build"
 	$temporaryOutputDirectory = "$outputDirectory\temp"
 
-	$publishedNUnitTestDirectory = "$temporaryOutputDirectory\_PublishedNUnitTests"
+	$publishedNUnitTestsDirectory = "$temporaryOutputDirectory\_PublishedNUnitTests"
+	$publishedXUnitTestsDirectory = "$temporaryOutputDirectory\_PublishedXUnitTests"
 
 	$testResultsDirectory = "$outputDirectory\TestResults"
 	$NUnitTestResultsDirectory = "$testResultsdirectory\NUnit"
+	$XUnitTestResultsDirectory = "$testResultsdirectory\XUnit"
 
 
 	$buildConfiguration = "Release"
@@ -19,6 +21,7 @@ properties{
 
 	$packagesPath = "$solutionDirectory\packages"
 	$NUnitExe = (Find-PackagePath $packagesPath "NUnit.ConsoleRunner") + "\Tools\nunit3-console.exe"
+	$XUnitExe = (Find-PackagePath $packagesPath "xunit.runner.console") + "\Tools\xunit.console.exe"
 }
 
 FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
@@ -26,6 +29,7 @@ FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
 task default -depends Test
 
 task Init -description "Initialises the build by removing previous artifacts and creating output directories" `
+			-depends Clean `
 			-requiredVariables outputDirectory, temporaryOutputDirectory {
 	
 	Assert -conditionToCheck ("Debug", "Release" -contains $buildConfiguration) `
@@ -35,8 +39,9 @@ task Init -description "Initialises the build by removing previous artifacts and
 			-failureMessage "Invalid build platform '$buildPlatform'. Values must be 'x86', 'x64' or 'Any CPU'."
 	# Check that all tools are available
 	Write-Host "Checking that all required tools are available"
-	Write-Host (Find-PackagePath $packagesPath "NUnit.ConsoleRunner")
+
 	Assert (Test-Path $NUnitExe) "NUnit Console could not be found"
+	Assert (Test-Path $xUnitExe) "XUnit Console could not be found"
 
 	# Remove previous build results
 	if(Test-Path $outputDirectory){
@@ -71,16 +76,29 @@ task Test -depends Compile, TestNUnit, TestXUnit, TestMSTest -description "Runs 
 
 task TestNUnit `
 	-depends Compile `
-	-description "Run Nunit tests" {
+	-description "Run Nunit tests" `
+	-precondition {return Test-Path $publishedNUnitTestsDirectory} `
+{
+	$testAssemblies = Prepare-Tests -testRunnerName "NUnit" `
+									-publishedTestsDirectory $publishedNUnitTestsDirectory `
+									-testResultsDirectory $NUnitTestResultsDirectory
 
-
+	Exec {
+		&$NUnitExe $testAssemblies --result $NUnitTestResultsDirectory\NUnit.xml --noheader
+	}
+	
 }
 
 task TestXUnit `
 	-depends Compile `
-	-description "Run XUnit tests" {
-
-
+	-description "Run XUnit tests" `
+	-precondition {return Test-Path $publishedxUnitTestsDirectory} ` {
+	$testAssemblies = Prepare-Tests -testRunnerName "XUnit" `
+									-publishedTestsDirectory $publishedXUnitTestsDirectory `
+									-testResultsDirectory $XUnitTestResultsDirectory
+	Exec{
+		&$XUnitExe $testAssemblies -xml $XunitTestResultsDirectory\xUnit.xml -nologo -noshadow
+	}
 }
 
 task TestMSTest `
