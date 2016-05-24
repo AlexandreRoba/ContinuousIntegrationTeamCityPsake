@@ -6,13 +6,14 @@ namespace WebApplication.Controllers
     public class HomeControllerTest
     {
         [Test]
-        public void About_WhenCalled_ShouldFillInTheMessage()
+        public void Contact_WhenCalled_ShouldReturnAnActionResult()
         {
             var sut = new HomeController();
 
-            sut.About();
+            var actual = sut.Contact();
 
-            Assert.IsNotEmpty(sut.ViewBag.Message);
+            Assert.IsNotNull(actual);
+            
         }
     }
 }
