@@ -1,0 +1,103 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<PropertyGroup>
+		<XUnitProjectOutputDirectory>$(OutDir)_PublishedXUnitTests\$(MSBuildProjectName)</XUnitProjectOutputDirectory>
+	</PropertyGroup>
+  <PropertyGroup>
+     <PrepareForRunDependsOn>
+    $(PrepareForRunDependsOn);
+    _CopyXUnitTests
+  </PrepareForRunDependsOn>
+  </PropertyGroup>
+
+
+  <Target Name="_CopyXUnitTests" Condition="'$(OutDir)' != '$(OutputPath)'" >
+    <!-- Log tasks -->
+    <Message Text="Copying XUnit Application Project Files for $(MSBuildProjectName)" />
+
+
+    <!-- Copy build outputs to _PublishedWebsites\app\bin folder -->
+    <Copy SourceFiles="@(IntermediateAssembly)" DestinationFolder="$(XUnitProjectOutputDirectory)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+    <Copy SourceFiles="@(AddModules)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+    <Copy SourceFiles="$(IntermediateOutputPath)$(_SGenDllName)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)\%(Content.SubFolder)%(Content.RecursiveDir)"
+          SkipUnchangedFiles="true"
+          Condition="'$(_SGenDllCreated)'=='true'"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+    <Copy SourceFiles="$(IntermediateOutputPath)$(TargetName).pdb"
+          DestinationFolder="$(XUnitProjectOutputDirectory)"
+          SkipUnchangedFiles="true"
+          Condition="'$(_DebugSymbolsProduced)'=='true'"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+    <Copy SourceFiles="@(DocFileItem)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)"
+          SkipUnchangedFiles="true"
+          Condition="'$(_DocumentationFileProduced)'=='true'"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+    <Copy SourceFiles="@(IntermediateSatelliteAssembliesWithTargetPath)"
+          DestinationFiles="@(IntermediateSatelliteAssembliesWithTargetPath->'$(XUnitProjectOutputDirectory)\bin\%(Culture)\$(TargetName).resources.dll')"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+    <Copy SourceFiles="@(ReferenceComWrappersToCopyLocal); @(ResolvedIsolatedComModules); @(_DeploymentLooseManifestFile); @(NativeReferenceFile)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+
+    <!-- copy any referenced assemblies to _PublishedWebsites\app\bin folder -->
+    <Copy SourceFiles="@(ReferenceCopyLocalPaths)"
+          DestinationFiles="@(ReferenceCopyLocalPaths->'$(XUnitProjectOutputDirectory)\%(DestinationSubDirectory)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+
+    <!-- Copy content files recursively to _PublishedWebsites\app\ folder -->
+    <Copy SourceFiles="@(Content)" Condition="'%(Content.Link)' == ''"
+          DestinationFolder="$(XUnitProjectOutputDirectory)\%(Content.RelativeDir)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)" />
+    <Copy SourceFiles="@(Content)" Condition="'%(Content.Link)' != ''"
+          DestinationFiles="$(XUnitProjectOutputDirectory)\%(Content.Link)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+
+    <!-- Copy items that have been marked to be copied to the bin folder -->
+    <Copy SourceFiles="@(_SourceItemsToCopyToOutputDirectory)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+    <Copy SourceFiles="@(_SourceItemsToCopyToOutputDirectoryAlways)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)"
+          SkipUnchangedFiles="false"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+
+    <!-- Copy Silverlight Zip and Xzp file to _PublishedWebsites\app\ folder-->
+    <Copy SourceFiles="@(_WebApplicationSilverlightXapFiles)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)\%(_WebApplicationSilverlightXapFiles.RelativeDir)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+
+    <!-- Copy items that need to be bin deployed to the bin folder -->
+    <Copy SourceFiles="@(_binDeployableAssemblies)"
+          DestinationFolder="$(XUnitProjectOutputDirectory)\%(_binDeployableAssemblies.DestinationRelPath)"
+          SkipUnchangedFiles="true"
+          Retries="$(CopyRetryCount)"
+          RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)"/>
+
+  </Target>
+</Project>
