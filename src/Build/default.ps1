@@ -1,4 +1,6 @@
-﻿properties{
+﻿Include ".\helpers.ps1"
+
+properties{
 	$cleanMessage = "Executed Clean!"
 	$testMessage = "Executed unit tests!"
 
@@ -6,8 +8,17 @@
 	$outputDirectory = "$solutionDirectory\.build"
 	$temporaryOutputDirectory = "$outputDirectory\temp"
 
+	$publishedNUnitTestDirectory = "$temporaryOutputDirectory\_PublishedNUnitTests"
+
+	$testResultsDirectory = "$outputDirectory\TestResults"
+	$NUnitTestResultsDirectory = "$testResultsdirectory\NUnit"
+
+
 	$buildConfiguration = "Release"
 	$buildPlatform = "Any CPU"
+
+	$packagesPath = "$solutionDirectory\packages"
+	$NUnitExe = (Find-PackagePath $packagesPath "NUnit.ConsoleRunner") + "\Tools\nunit3-console.exe"
 }
 
 FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
@@ -22,6 +33,10 @@ task Init -description "Initialises the build by removing previous artifacts and
 
 	Assert -conditionToCheck ("x86", "x64", "Any CPU" -contains $buildPlatform) `
 			-failureMessage "Invalid build platform '$buildPlatform'. Values must be 'x86', 'x64' or 'Any CPU'."
+	# Check that all tools are available
+	Write-Host "Checking that all required tools are available"
+	Write-Host (Find-PackagePath $packagesPath "NUnit.ConsoleRunner")
+	Assert (Test-Path $NUnitExe) "NUnit Console could not be found"
 
 	# Remove previous build results
 	if(Test-Path $outputDirectory){
@@ -50,6 +65,27 @@ task Compile -depends Init `
 	}
 }
 
-task Test -depends Compile, Clean -description "Runs the unit test"{
+task Test -depends Compile, TestNUnit, TestXUnit, TestMSTest -description "Runs the unit test"{
 	Write-Host $testMessage
+}
+
+task TestNUnit `
+	-depends Compile `
+	-description "Run Nunit tests" {
+
+
+}
+
+task TestXUnit `
+	-depends Compile `
+	-description "Run XUnit tests" {
+
+
+}
+
+task TestMSTest `
+	-depends Compile `
+	-description "Run MSTest tests" {
+
+
 }
