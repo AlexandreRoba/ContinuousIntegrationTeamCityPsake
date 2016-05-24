@@ -10,7 +10,7 @@
 	$buildPlatform = "Any CPU"
 }
 
-FormatTaskName "`r`n`r`n---------- Executing {0} Task -------"
+FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
 
 task default -depends Test
 
@@ -44,6 +44,7 @@ task Compile -depends Init `
 	-description "Compile the solution"`
 	-requiredVariables solutionFile,buildConfiguration,buildPlatform,temporaryOutputDirectory {
 	Write-Host "Building Solution $solutionFile"
+	# We use Exec to capture the exit code of MSBuild. This will make the task fails if the exit code is not 0 and will make the build fail
 	exec {
 		msbuild $solutionFile "/p:Configuration=$buildConfiguration;Platform=$buildPlatform;OutDir=$temporaryOutputDirectory"
 	}
