@@ -4,16 +4,18 @@ properties{
 	$cleanMessage = "Executed Clean!"
 	$testMessage = "Executed unit tests!"
 
-	$solutionDirectory = (Get-Item $solutionFile).DirectoryName
+	$solutionDirectory = (Get-Item $solutionFile).DirectoryName 
 	$outputDirectory = "$solutionDirectory\.build"
 	$temporaryOutputDirectory = "$outputDirectory\temp"
 
 	$publishedNUnitTestsDirectory = "$temporaryOutputDirectory\_PublishedNUnitTests"
 	$publishedXUnitTestsDirectory = "$temporaryOutputDirectory\_PublishedXUnitTests"
+	$publishedMSTestTestsDirectory = "$temporaryOutputDirectory\_PublishedMSTestTests"
 
 	$testResultsDirectory = "$outputDirectory\TestResults"
 	$NUnitTestResultsDirectory = "$testResultsdirectory\NUnit"
 	$XUnitTestResultsDirectory = "$testResultsdirectory\XUnit"
+	$MSTestTestResultsDirectory = "$testResultsdirectory\MSTest"
 
 
 	$buildConfiguration = "Release"
@@ -22,6 +24,7 @@ properties{
 	$packagesPath = "$solutionDirectory\packages"
 	$NUnitExe = (Find-PackagePath $packagesPath "NUnit.ConsoleRunner") + "\Tools\nunit3-console.exe"
 	$XUnitExe = (Find-PackagePath $packagesPath "xunit.runner.console") + "\Tools\xunit.console.exe"
+	$MSTestExe = (Get-ChildItem ("C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe")).FullName | Sort-Object $_ | select -last 1
 }
 
 FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
@@ -42,6 +45,7 @@ task Init -description "Initialises the build by removing previous artifacts and
 
 	Assert (Test-Path $NUnitExe) "NUnit Console could not be found"
 	Assert (Test-Path $xUnitExe) "XUnit Console could not be found"
+	Assert (Test-Path $MSTestExe) "MSTest Console could not be found"
 
 	# Remove previous build results
 	if(Test-Path $outputDirectory){
@@ -103,7 +107,20 @@ task TestXUnit `
 
 task TestMSTest `
 	-depends Compile `
-	-description "Run MSTest tests" {
+	-description "Run MSTest tests" `
+	-precondition { return Test-Path $publishedMSTestTestsDirectory} {
+		$testAssemblies = Prepare-Tests -testRunnerName "MSTest" `
+									-publishedTestsDirectory $publishedMSTestTestsDirectory `
+									-testResultsDirectory $MSTestTestResultsDirectory
 
+		#vsTest console does not have any option to change the output directory
+		#so we need to change the working directory
+		Push-Location $MSTestTestResultsDirectory
+		Exec{ &$MSTestExe $testAssemblies /Logger:trx}
+		Pop-Location
+
+		# move the .trx file back to $MSTestTestResultsDirectory
+		Move-Item -Path $MSTestTestResultsDirectory\TestResults\*.trx -Destination $MSTestTestResultsDirectory\MSTest.trx
+		Remove-Item $MStestTestResultsDirectory\TestResults
 
 }
