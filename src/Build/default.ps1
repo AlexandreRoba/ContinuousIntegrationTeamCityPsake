@@ -188,7 +188,7 @@ task TestMSTest `
 		Pop-Location
 
 		# move the .trx file back to $MSTestTestResultsDirectory
-		Move-Item -Path $MSTestTestResultsDirectory\TestResults\*.trx -Destination $MSTestTestResultsDirectory\MSTest -Force
+		Move-Item -Path $MSTestTestResultsDirectory\TestResults\*.trx -Destination $MSTestTestResultsDirectory\MSTest.trx -Force
 		Remove-Item $MStestTestResultsDirectory\TestResults
 
 }
