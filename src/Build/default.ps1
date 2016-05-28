@@ -97,7 +97,7 @@ task Test -depends Compile, TestNUnit, TestXUnit, TestMSTest -description "Runs 
 		$coverageSummary = $coverage.CoverageSession.Summary
 		# Write class coverage
 		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsCCovered' value='$($coverageSummary.visitedClasses)']"
-		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsCTotal' value='$($coverageSummary.numClassas)']"
+		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsCTotal' value='$($coverageSummary.numClasses)']"
 		Write-Host ("##teamcity[buildStatisticValue key='CodeCoverageC' value='{0:N2}']" -f (($coverageSummary.visitedClasses / $coverageSummary.numClasses)*100))
 		
 		# Write method coverage
