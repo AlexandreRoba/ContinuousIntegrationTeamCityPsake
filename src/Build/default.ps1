@@ -1,9 +1,6 @@
 ﻿Include ".\helpers.ps1"
 
 properties{
-	$cleanMessage = "Executed Clean!"
-	$testMessage = "Executed unit tests!"
-
 	$solutionDirectory = (Get-Item $solutionFile).DirectoryName 
 	$outputDirectory = "$solutionDirectory\.build"
 	$temporaryOutputDirectory = "$outputDirectory\temp"
@@ -13,6 +10,7 @@ properties{
 	$publishedMSTestTestsDirectory = "$temporaryOutputDirectory\_PublishedMSTestTests"
 	$publishedApplicationsDirectory = "$temporaryOutputDirectory\_PublishedApplications"
 	$publishedWebsitesDirectory = "$temporaryOutputDirectory\_PublishedWebsites"
+	$publishedLibrariesDirectory = "$temporaryOutputDirectory\_PublishedLibraries"
 
 	$testResultsDirectory = "$outputDirectory\TestResults"
 	$NUnitTestResultsDirectory = "$testResultsdirectory\NUnit"
@@ -27,6 +25,7 @@ properties{
 
 	$packagesOutputDirectory = "$outputDirectory\Packages"
 	$applicationsOutputDirectory = "$packagesOutputDirectory\Applications"
+	$librariesOutputDirectory = "$packagesOutputDirectory\Libraries"
 
 	$buildConfiguration = "Release"
 	$buildPlatform = "Any CPU"
@@ -46,7 +45,6 @@ FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
 task default -depends Package
 
 task Init -description "Initialises the build by removing previous artifacts and creating output directories" `
-			-depends Clean `
 			-requiredVariables outputDirectory, temporaryOutputDirectory {
 	
 	Assert -conditionToCheck ("Debug", "Release" -contains $buildConfiguration) `
@@ -78,8 +76,14 @@ task Init -description "Initialises the build by removing previous artifacts and
 	New-Item $temporaryOutputDirectory -ItemType Directory | Out-Null
 }
 
-task Clean -description "Clean the build output"{
-	Write-Host $cleanMessage
+task Clean -description "Remove temporary files" `
+			-depends Compile, Test, Package `
+			-requiredVariables temporaryOutputDirectory {
+	if(Test-Path $temporaryOutputDirectory)
+	{
+		Write-Host "Removing temporary output Directory located at $temporaryOutputDirectory"
+		Remove-Item $temporaryOutputDirectory -Force -Recurse
+	}
 }
 
 task Compile -depends Init `
@@ -88,13 +92,13 @@ task Compile -depends Init `
 	Write-Host "Building Solution $solutionFile"
 	# We use Exec to capture the exit code of MSBuild. This will make the task fails if the exit code is not 0 and will make the build fail
 	exec {
-		msbuild $solutionFile "/p:Configuration=$buildConfiguration;Platform=$buildPlatform;OutDir=$temporaryOutputDirectory"
+		msbuild $solutionFile "/p:Configuration=$buildConfiguration;Platform=$buildPlatform;OutDir=$temporaryOutputDirectory;NuGetExePath=$nugetExe"
 	}
 }
 
 task Package -depends Compile, Test `
 			-description "Package applications" `
-			-requiredVariables publishedWebSitesDirectory, publishedApplicationsDirectory, applicationsOutputDirectory `
+			-requiredVariables publishedWebSitesDirectory, publishedApplicationsDirectory, applicationsOutputDirectory, publishedLibrariesDirectory, librariesOutputDirectory `
 {
 	# Merge published webSites and published applications paths
 	# The @() creates an array of the outputed items
@@ -134,6 +138,16 @@ task Package -depends Compile, Test `
 			$inputDirectory ="$($application.FullName)\*"
 			Exec { &$7ZipExe a -r -mx3 $archivePath $inputDirectory}
 		}
+
+		# Moving Nuget libraries to the package directory
+		if(Test-Path $publishedLibrariesDirectory){
+			if(!(Test-Path $librariesOutputDirectory)){
+				MkDir $librariesOutputDirectory | Out-Null
+			}
+
+			Get-ChildItem -Path $publishedLibrariesDirectory -Filter "*.nupkg" -Recurse | Move-Item -Destination $librariesOutputDirectory
+		}
+
 	}
 }
 
