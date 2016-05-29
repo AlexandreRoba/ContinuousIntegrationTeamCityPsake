@@ -11,6 +11,8 @@ properties{
 	$publishedNUnitTestsDirectory = "$temporaryOutputDirectory\_PublishedNUnitTests"
 	$publishedXUnitTestsDirectory = "$temporaryOutputDirectory\_PublishedXUnitTests"
 	$publishedMSTestTestsDirectory = "$temporaryOutputDirectory\_PublishedMSTestTests"
+	$publishedApplicationsDirectory = "$temporaryOutputDirectory\_PublishedApplications"
+	$publishedWebsitesDirectory = "$temporaryOutputDirectory\_PublishedWebsites"
 
 	$testResultsDirectory = "$outputDirectory\TestResults"
 	$NUnitTestResultsDirectory = "$testResultsdirectory\NUnit"
@@ -23,6 +25,8 @@ properties{
 	$testCoverageExcludeByAttribute = "System.Diagnostics.CodeAnalysis.ExcludeFromCoverageAttribute"
 	$testCoverageExcludeByFile = "*\*Designer.cs;*\*.g.cs;*\*.g.i.cs"
 
+	$packagesOutputDirectory = "$outputDirectory\Packages"
+	$applicationsOutputDirectory = "$packagesOutputDirectory\Applications"
 
 	$buildConfiguration = "Release"
 	$buildPlatform = "Any CPU"
@@ -33,11 +37,12 @@ properties{
 	$MSTestExe = (Get-ChildItem ("C:\Program Files (x86)\Microsoft Visual Studio 12.0\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe")).FullName | Sort-Object $_ | select -last 1
 	$OpenCoverExe = (Find-PackagePath $packagesPath "OpenCover") + "\Tools\OpenCover.Console.exe"
 	$ReportGeneratorExe = (Find-PackagePath $packagesPath "ReportGenerator") + "\Tools\ReportGenerator.exe"
+	$7ZipExe = (Find-PackagePath $packagesPath "7-Zip.CommandLine") + "\Tools\7za.exe"
 }
 
 FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
 
-task default -depends Test
+task default -depends Package
 
 task Init -description "Initialises the build by removing previous artifacts and creating output directories" `
 			-depends Clean `
@@ -56,6 +61,7 @@ task Init -description "Initialises the build by removing previous artifacts and
 	Assert (Test-Path $MSTestExe) "MSTest Console could not be found"
 	Assert (Test-Path $OpenCoverExe) "OpenCover Console Could not be found"
 	Assert (Test-Path $ReportGeneratorExe) "Report Generator could not be found"
+	Assert (Test-Path $7ZipExe) "7Zip could not be found"
 
 	# Remove previous build results
 	if(Test-Path $outputDirectory){
@@ -81,6 +87,28 @@ task Compile -depends Init `
 	# We use Exec to capture the exit code of MSBuild. This will make the task fails if the exit code is not 0 and will make the build fail
 	exec {
 		msbuild $solutionFile "/p:Configuration=$buildConfiguration;Platform=$buildPlatform;OutDir=$temporaryOutputDirectory"
+	}
+}
+
+task Package -depends Compile, Test `
+			-description "Package applications" `
+			-requiredVariables publishedWebSitesDirectory, publishedApplicationsDirectory, applicationsOutputDirectory `
+{
+	# Merge published webSites and published applications paths
+	# The @() creates an array of the outputed items
+	$applications = @(Get-ChildItem $publishedWebSitesDirectory) + @(Get-ChildItem $publishedApplicationsDirectory)
+
+	if (($applications.Length -gt 0) -and !(Test-Path $applicationsOutputDirectory))
+	{
+		New-Item $applicationsOutputDirectory -ItemType Directory | Out-Null
+	}
+
+	foreach($application in $applications)
+	{
+		Write-Host "Packaging $($application.Name) as a zip file"
+		$archivePath = "$($applicationsOutputDirectory)\$($application.Name).zip"
+		$inputDirectory ="$($application.FullName)\*"
+		Exec { &$7ZipExe a -r -mx3 $archivePath $inputDirectory}
 	}
 }
 
