@@ -95,15 +95,20 @@ task Test -depends Compile, TestNUnit, TestXUnit, TestMSTest -description "Runs 
 		# Load the coverage report as XML
 		$coverage = [xml](Get-Content -Path $testCoverageReportPath)
 		$coverageSummary = $coverage.CoverageSession.Summary
+
+		# We force the formating of the numbers to be in US culture otherwise we will get comma instead of points.
+		$UsCulture = New-Object System.Globalization.CultureInfo("us-EN")
 		# Write class coverage
 		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsCCovered' value='$($coverageSummary.visitedClasses)']"
 		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsCTotal' value='$($coverageSummary.numClasses)']"
-		Write-Host ("##teamcity[buildStatisticValue key='CodeCoverageC' value='{0:N2}']" -f (($coverageSummary.visitedClasses / $coverageSummary.numClasses)*100))
+		$codeCoverageC = (($coverageSummary.visitedClasses / $coverageSummary.numClasses)*100)
+		Write-Host ([string]::Format($UsCulture,"##teamcity[buildStatisticValue key='CodeCoverageC' value='{0:0.##}']",$codeCoverageC))
 		
 		# Write method coverage
 		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsMCovered' value='$($coverageSummary.visitedMethods)']"
 		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsMTotal' value='$($coverageSummary.numMethods)']"
-		Write-Host ("##teamcity[buildStatisticValue key='CodeCoverageM' value='{0:N2}']" -f (($coverageSummary.visitedMethods / $coverageSummary.numMethods)*100))
+		$codeCoverageM = (($coverageSummary.visitedMethods / $coverageSummary.numMethods)*100)
+		Write-Host ([string]::Format($UsCulture,"##teamcity[buildStatisticValue key='CodeCoverageM' value='{0:0.##}']",$codeCoverageM))
 	
 		# Write branch coverage
 		Write-Host "##teamcity[buildStatisticValue key='CodeCoverageAbsBCovered' value='$($coverageSummary.visitedBranchPoints)']"
