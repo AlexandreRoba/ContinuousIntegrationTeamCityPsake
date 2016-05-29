@@ -38,6 +38,7 @@ properties{
 	$OpenCoverExe = (Find-PackagePath $packagesPath "OpenCover") + "\Tools\OpenCover.Console.exe"
 	$ReportGeneratorExe = (Find-PackagePath $packagesPath "ReportGenerator") + "\Tools\ReportGenerator.exe"
 	$7ZipExe = (Find-PackagePath $packagesPath "7-Zip.CommandLine") + "\Tools\7za.exe"
+	$nugetExe = (Find-PackagePath $packagesPath "Nuget.CommandLine") + "\Tools\NuGet.exe"
 }
 
 FormatTaskName "`r`n`r`n----------------- Executing {0} Task ---------------"
@@ -62,6 +63,7 @@ task Init -description "Initialises the build by removing previous artifacts and
 	Assert (Test-Path $OpenCoverExe) "OpenCover Console Could not be found"
 	Assert (Test-Path $ReportGeneratorExe) "Report Generator could not be found"
 	Assert (Test-Path $7ZipExe) "7Zip could not be found"
+	Assert (Test-Path $nugetExe) "Nuget could not be found"
 
 	# Remove previous build results
 	if(Test-Path $outputDirectory){
@@ -105,10 +107,33 @@ task Package -depends Compile, Test `
 
 	foreach($application in $applications)
 	{
-		Write-Host "Packaging $($application.Name) as a zip file"
-		$archivePath = "$($applicationsOutputDirectory)\$($application.Name).zip"
-		$inputDirectory ="$($application.FullName)\*"
-		Exec { &$7ZipExe a -r -mx3 $archivePath $inputDirectory}
+		$nuspecPath = $application.FullName + "\" + $application.Name + ".nuspec"
+		Write-Host "Looking for nuspec file at $nuspecPath"
+		if(Test-Path $nuspecPath)
+		{
+			Write-Host "Packaging $($application.Name) as a Nuget package"
+			# Load the nuspec file as XML
+			$nuspec = [xml](Get-Content -Path $nuspecPath)
+			$metadata = $nuspec.package.metadata
+			# Edit the metadata
+			$metadata.version = $metadata.version.Replace("[buildNumber]",$buildNumber)
+			if(!$isMainBranch){
+				$metadata.version = $metadata.version + "-$branchName"
+			}
+			$metadata.releaseNotes = "Build Number: $buildNumber`r`nBranch Name: $branchName`r`nCommit Hash: $gitCommitHash"
+
+			# Save the nuspec file
+			$nuspec.Save((Get-Item $nuspecPath))
+
+			Exec{ &$nugetExe pack $nuspecPath -OutputDirectory $applicationsOutputDirectory}
+		}
+		else
+		{
+			Write-Host "Packaging $($application.Name) as a zip file"
+			$archivePath = "$($applicationsOutputDirectory)\$($application.Name).zip"
+			$inputDirectory ="$($application.FullName)\*"
+			Exec { &$7ZipExe a -r -mx3 $archivePath $inputDirectory}
+		}
 	}
 }
 
